@@ -2,6 +2,7 @@
 """Apply the Ray display brand without changing installed apps' stable identifiers."""
 
 from pathlib import Path
+import json
 import re
 import sys
 
@@ -164,5 +165,24 @@ for path in (root / "crates/ui-egui/src").rglob("*.tsv"):
     )
     if updated != original:
         path.write_text(updated, encoding="utf-8")
+
+# LightCraft generates tr_format! arms from the English keys in these JSON
+# catalogs. Keep the keys in sync with the renamed Rust call sites, or the
+# build fails even though the ordinary UI strings have been updated.
+locale_dir = root / "crates/ui-egui/locales"
+if locale_dir.exists():
+    for path in locale_dir.glob("*.json"):
+        original = path.read_text(encoding="utf-8")
+        catalog = json.loads(original)
+        updated = {
+            word.sub(new_title, key): (
+                value if "authors" in value or "Copyright" in value else word.sub(new_title, value)
+            )
+            for key, value in catalog.items()
+        }
+        if len(updated) != len(catalog):
+            raise SystemExit(f"branding collision in {path}")
+        if updated != catalog:
+            path.write_text(json.dumps(updated, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 print(f"{old_title} → {new_title}: display branding applied; bundle, registry and executable IDs unchanged")
