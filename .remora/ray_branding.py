@@ -14,7 +14,9 @@ old_title, new_title, root_arg = sys.argv[1:]
 root = Path(root_arg)
 old_slug = old_title.lower()
 new_slug = new_title.lower()
-word = re.compile(rf"(?<!\w){re.escape(old_title)}(?!\w)")
+# Rust strings can contain an escaped newline ("\\nLightCraft"). The `n` is
+# syntactically an escape, not part of the displayed word.
+word = re.compile(rf"(?:(?<!\w)|(?<=\\[nrt])){re.escape(old_title)}(?!\w)")
 
 
 def rewrite(path: Path, transform) -> None:
